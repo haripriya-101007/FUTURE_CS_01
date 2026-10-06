@@ -1,0 +1,159 @@
+import threading
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+import requests
+
+
+class TestWebsite(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+
+        self.end_headers()
+
+        html = """
+        <html>
+        <head>
+            <title>Security Test Website</title>
+        </head>
+
+        <body>
+            <h1>Web Security Test Page</h1>
+            <p>This is a local authorized test website.</p>
+        </body>
+        </html>
+        """
+
+        self.wfile.write(html.encode())
+
+
+def start_server():
+
+    server = HTTPServer(("127.0.0.1", 8000), TestWebsite)
+
+    print("======================================")
+    print("       TEST WEBSITE IS RUNNING")
+    print("======================================")
+    print("URL: http://127.0.0.1:8000")
+    print()
+
+    server.serve_forever()
+
+
+SECURITY_HEADERS = {
+    "Strict-Transport-Security": "HSTS",
+    "Content-Security-Policy": "Content Security Policy",
+    "X-Content-Type-Options": "X-Content-Type-Options",
+    "X-Frame-Options": "X-Frame-Options",
+    "Referrer-Policy": "Referrer Policy",
+    "Permissions-Policy": "Permissions Policy"
+}
+
+
+def check_website(url):
+
+    print("Connecting to:", url)
+
+    try:
+
+        response = requests.get(url, timeout=5)
+
+        print("\n======================================")
+        print("          WEB SECURITY CHECK")
+        print("======================================")
+
+        print("URL:", response.url)
+        print("Status Code:", response.status_code)
+
+        print("\nSecurity Headers:")
+        print("--------------------------------------")
+
+        for header, description in SECURITY_HEADERS.items():
+
+            if header in response.headers:
+                print("[PASS]    " + description)
+            else:
+                print("[MISSING] " + description)
+
+        print("\n======================================")
+        print("          ASSESSMENT COMPLETE")
+        print("======================================")
+
+    except requests.exceptions.ConnectionError:
+
+        print("\nERROR: Cannot connect to the website.")
+
+    except requests.exceptions.Timeout:
+
+        print("\nERROR: Connection timed out.")
+
+    except requests.exceptions.RequestException as error:
+
+        print("\nERROR:", error)
+
+
+print("======================================")
+print("       WEB VULNERABILITY CHECKER")
+print("======================================")
+
+
+server_thread = threading.Thread(
+    target=start_server,
+    daemon=True
+)
+
+server_thread.start()
+
+
+time.sleep(1)
+
+
+url = "http://127.0.0.1:8000"
+
+print("\nTarget:", url)
+
+check_website(url)
+
+
+  OUTPUT:
+
+======================================
+       WEB VULNERABILITY CHECKER
+======================================
+======================================
+       TEST WEBSITE IS RUNNING
+======================================
+URL: http://127.0.0.1:8000
+
+
+Target: http://127.0.0.1:8000
+Connecting to: http://127.0.0.1:8000
+127.0.0.1 - - [05/Oct/2026 16:48:37] "GET / HTTP/1.1" 200 -
+
+======================================
+          WEB SECURITY CHECK
+======================================
+URL: http://127.0.0.1:8000/
+Status Code: 200
+
+Security Headers:
+--------------------------------------
+[MISSING] HSTS
+[MISSING] Content Security Policy
+[PASS]    X-Content-Type-Options
+[PASS]    X-Frame-Options
+[MISSING] Referrer Policy
+[MISSING] Permissions Policy
+
+======================================
+          ASSESSMENT COMPLETE
+======================================
+Ready
+
+Terminal
+
