@@ -1,0 +1,212 @@
+import re
+from urllib.parse import urlparse
+
+URGENT_WORDS = [
+    "urgent",
+    "immediately",
+    "verify your account",
+    "account suspended",
+    "account locked",
+    "act now",
+    "confirm your identity",
+    "limited time",
+    "click now",
+    "password expires"
+]
+
+SUSPICIOUS_TLDS = [
+    ".tk",
+    ".ml",
+    ".ga",
+    ".cf",
+    ".gq"
+]
+
+TRUSTED_DOMAINS = [
+    "google.com",
+    "microsoft.com",
+    "apple.com",
+    "amazon.com",
+    "paypal.com"
+]
+
+def extract_urls(text):
+    pattern = r'https?://[^\s<>"\']+'
+    return re.findall(pattern, text)
+
+def check_sender(sender):
+
+    indicators = []
+
+    match = re.search(r'@([A-Za-z0-9.-]+\.[A-Za-z]{2,})', sender)
+
+    if not match:
+        indicators.append("Invalid or missing sender domain")
+        return indicators
+
+    domain = match.group(1).lower()
+
+    for trusted in TRUSTED_DOMAINS:
+
+        brand = trusted.split(".")[0]
+
+        if brand in domain and domain != trusted:
+            indicators.append(
+                f"Possible spoofed brand domain: {domain}"
+            )
+    for tld in SUSPICIOUS_TLDS:
+        if domain.endswith(tld):
+            indicators.append(
+                f"Suspicious domain extension: {tld}"
+            )
+
+    return indicators
+
+def check_links(text):
+
+    indicators = []
+
+    urls = extract_urls(text)
+
+    for url in urls:
+
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+
+            if re.match(r'^\d+\.\d+\.\d+\.\d+$', domain):
+                indicators.append(
+                    f"Link uses an IP address: {domain}"
+                )
+
+
+            for tld in SUSPICIOUS_TLDS:
+                if domain.endswith(tld):
+                    indicators.append(
+                        f"Suspicious link domain: {domain}"
+                    )
+
+        except Exception:
+            indicators.append("Malformed URL detected")
+
+    return indicators
+
+def check_urgent_language(text):
+
+    indicators = []
+
+    text_lower = text.lower()
+
+    for word in URGENT_WORDS:
+
+        if word in text_lower:
+            indicators.append(
+                f"Urgency indicator: '{word}'"
+            )
+
+    return indicators
+
+
+def classify_email(indicators):
+
+    score = len(indicators)
+
+    if score >= 4:
+        return "PHISHING", "HIGH"
+
+    elif score >= 2:
+        return "SUSPICIOUS", "MEDIUM"
+
+    else:
+        return "SAFE", "LOW"
+
+
+def analyze_email(sender, subject, body):
+
+    all_indicators = []
+
+    all_indicators.extend(check_sender(sender))
+    all_indicators.extend(check_links(body))
+    all_indicators.extend(check_urgent_language(subject + " " + body))
+
+    classification, risk = classify_email(all_indicators)
+
+    print("\n" + "=" * 60)
+    print("             PHISHING EMAIL ANALYZER")
+    print("=" * 60)
+
+    print("Sender  :", sender)
+    print("Subject :", subject)
+
+    print("\nIndicators Found:")
+    print("-" * 60)
+
+    if all_indicators:
+
+        for number, indicator in enumerate(all_indicators, 1):
+            print(f"{number}. {indicator}")
+
+    else:
+        print("No obvious phishing indicators detected.")
+
+    print("\n" + "-" * 60)
+    print("Classification :", classification)
+    print("Risk Level      :", risk)
+    print("-" * 60)
+
+    if classification == "PHISHING":
+        print("Recommendation  : Do not click links or provide")
+        print("                  credentials. Report the email.")
+
+    elif classification == "SUSPICIOUS":
+        print("Recommendation  : Verify the sender through a")
+        print("                  trusted channel before acting.")
+
+    else:
+        print("Recommendation  : No obvious indicators detected.")
+        print("                  Continue normal security checks.")
+
+    print("=" * 60)
+
+
+print("=" * 60)
+print("             PHISHING DETECTION TOOL")
+print("=" * 60)
+
+sender = input("Enter sender email: ")
+subject = input("Enter email subject: ")
+body = input("Enter email body: ")
+
+analyze_email(sender, subject, body)
+
+
+OUTPUT:
+
+============================================================
+             PHISHING DETECTION TOOL
+============================================================
+Enter sender email: haripriya567@gmail.com
+Enter email subject: Verify your account immediately
+Enter email body: Your account has been suspended
+
+============================================================
+             PHISHING EMAIL ANALYZER
+============================================================
+Sender  : haripriya567@gmail.com
+Subject : Verify your account immediately
+
+Indicators Found:
+------------------------------------------------------------
+1. Urgency indicator: 'immediately'
+2. Urgency indicator: 'verify your account'
+
+------------------------------------------------------------
+Classification : SUSPICIOUS
+Risk Level      : MEDIUM
+------------------------------------------------------------
+Recommendation  : Verify the sender through a
+                  trusted channel before acting.
+============================================================
+Ready
+
+Terminal
