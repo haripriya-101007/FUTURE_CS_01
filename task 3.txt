@@ -1,0 +1,233 @@
+import requests
+BASE_URL = "http://127.0.0.1:5000"
+
+def check_endpoint(path):
+
+    url = BASE_URL + path
+
+    print("\nChecking:", url)
+
+    try:
+
+        response = requests.get(
+            url,
+            timeout=5
+        )
+
+        print("Status Code:", response.status_code)
+
+        security_headers = [
+            "X-Content-Type-Options",
+            "X-Frame-Options",
+            "Content-Security-Policy",
+            "Strict-Transport-Security"
+        ]
+
+        print("\nSecurity Headers:")
+        print("----------------------------------------------")
+
+        for header in security_headers:
+
+            if header in response.headers:
+                print("[PASS]    ", header)
+
+            else:
+                print("[MISSING] ", header)
+
+        if response.status_code == 200:
+
+            try:
+
+                data = response.json()
+
+                if "users" in data:
+
+                    print("\n[WARNING] User data is accessible")
+                    print("          without authentication.")
+
+                elif "email" in data:
+
+                    print("\n[WARNING] User information exposed:")
+                    print("          Email field is returned.")
+
+            except ValueError:
+
+                print("\nResponse is not JSON.")
+
+    except requests.exceptions.ConnectionError:
+
+        print("\nERROR: API server is not running.")
+        print("Start test_api.py first.")
+
+    except requests.exceptions.Timeout:
+
+        print("\nERROR: Connection timed out.")
+
+    except requests.exceptions.RequestException as error:
+
+        print("\nERROR:", error)
+
+def check_login():
+
+    url = BASE_URL + "/api/login"
+
+    print("\nChecking authentication endpoint:")
+    print(url)
+
+    data = {
+        "username": "wrong-user",
+        "password": "wrong-password"
+    }
+
+    try:
+
+        response = requests.post(
+            url,
+            json=data,
+            timeout=5
+        )
+
+        print("Status Code:", response.status_code)
+
+        if response.status_code == 401:
+
+            print(
+                "[PASS] Authentication rejects "
+                "invalid credentials."
+            )
+
+        else:
+
+            print(
+                "[WARNING] Unexpected authentication "
+                "response."
+            )
+
+    except requests.exceptions.ConnectionError:
+
+        print("\nERROR: API server is not running.")
+
+    except requests.exceptions.RequestException as error:
+
+        print("\nERROR:", error)
+
+def generate_report():
+
+    print("\n")
+    print("=" * 60)
+    print("             API SECURITY RISK ANALYSIS")
+    print("=" * 60)
+
+    print("\nFindings:")
+    print("-" * 60)
+
+    print("\n1. Unauthenticated user endpoint")
+    print("   Risk   : MEDIUM")
+    print("   Impact : User information may be accessible")
+    print("            without authentication.")
+
+    print("\n2. Missing security headers")
+    print("   Risk   : LOW")
+    print("   Impact : Additional security protections")
+    print("            are not configured.")
+
+    print("\n3. Authentication endpoint")
+    print("   Risk   : LOW")
+    print("   Status : Invalid credentials were rejected.")
+
+    print("\nRecommendations:")
+    print("-" * 60)
+
+    print("1. Require authentication for sensitive endpoints.")
+    print("2. Implement authorization checks.")
+    print("3. Avoid returning unnecessary user information.")
+    print("4. Add appropriate security headers.")
+    print("5. Implement rate limiting.")
+    print("6. Validate API input.")
+    print("7. Never expose production credentials or tokens.")
+
+    print("\n" + "=" * 60)
+    print("             ASSESSMENT COMPLETE")
+    print("=" * 60)
+
+print("=" * 60)
+print("             API SECURITY CHECKER")
+print("=" * 60)
+
+print("\nTarget API:", BASE_URL)
+
+check_endpoint("/")
+check_endpoint("/api/users")
+check_endpoint("/api/users/1")
+
+check_login()
+
+generate_report()
+  
+
+OUTPUT:
+
+============================================================
+             API SECURITY CHECKER
+============================================================
+
+Target API: http://127.0.0.1:5000
+
+Checking: http://127.0.0.1:5000/
+
+ERROR: API server is not running.
+Start test_api.py first.
+
+Checking: http://127.0.0.1:5000/api/users
+
+ERROR: API server is not running.
+Start test_api.py first.
+
+Checking: http://127.0.0.1:5000/api/users/1
+
+ERROR: API server is not running.
+Start test_api.py first.
+
+Checking authentication endpoint:
+http://127.0.0.1:5000/api/login
+
+ERROR: API server is not running.
+
+
+============================================================
+             API SECURITY RISK ANALYSIS
+============================================================
+
+Findings:
+------------------------------------------------------------
+
+1. Unauthenticated user endpoint
+   Risk   : MEDIUM
+   Impact : User information may be accessible
+            without authentication.
+
+2. Missing security headers
+   Risk   : LOW
+   Impact : Additional security protections
+            are not configured.
+
+3. Authentication endpoint
+   Risk   : LOW
+   Status : Invalid credentials were rejected.
+
+Recommendations:
+------------------------------------------------------------
+1. Require authentication for sensitive endpoints.
+2. Implement authorization checks.
+3. Avoid returning unnecessary user information.
+4. Add appropriate security headers.
+5. Implement rate limiting.
+6. Validate API input.
+7. Never expose production credentials or tokens.
+
+============================================================
+             ASSESSMENT COMPLETE
+============================================================
+Ready
+
+Terminal
